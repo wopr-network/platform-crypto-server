@@ -1,0 +1,50 @@
+{
+  "name": "@wopr-network/platform-crypto-server",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/entry.js",
+  "types": "dist/entry.d.ts",
+  "exports": {
+    ".": "./dist/entry.js",
+    "./plugin": {
+      "import": "./dist/plugin/index.js",
+      "types": "./dist/plugin/index.d.ts"
+    }
+  },
+  "bin": {
+    "crypto-server": "dist/entry.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "biome check src/",
+    "format": "biome format --write src/",
+    "test": "vitest run",
+    "start": "node dist/entry.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.0",
+    "@noble/curves": "^2.0.1",
+    "@noble/hashes": "^2.0.1",
+    "@scure/base": "^1.2.4",
+    "@scure/bip32": "^2.0.1",
+    "@wopr-network/crypto-plugins": "^1.0.1",
+    "drizzle-orm": "^0.44.2",
+    "hono": "^4.7.10",
+    "pg": "^8.16.0",
+    "viem": "^2.30.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.8",
+    "@types/pg": "^8.15.4",
+    "@types/node": "^25.5.0",
+    "drizzle-kit": "^0.31.3",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "release": {
+    "extends": "@wopr-network/semantic-release-config"
+  }
+}
