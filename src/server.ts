@@ -348,6 +348,44 @@ export function createKeyServerApp(deps: KeyServerDeps): Hono {
 
 	// --- Admin API ---
 
+	/** GET /admin/chains — full payment method records for admin tools (sweep CLI, etc.) */
+	app.get("/admin/chains", async (c) => {
+		const methods = await deps.methodStore.listAll();
+		// Join with path_allocations to get coin_type
+		const allocations = await deps.db.select().from(pathAllocations);
+		const coinTypeByChainId = new Map<string, number>();
+		for (const a of allocations) {
+			if (a.chainId) coinTypeByChainId.set(a.chainId, a.coinType);
+		}
+		// Also check key_rings for Ed25519 chains
+		const rings = await deps.db.select().from(keyRings);
+		const coinTypeByKeyRing = new Map<string, number>();
+		for (const r of rings) {
+			coinTypeByKeyRing.set(r.id, r.coinType);
+		}
+
+		return c.json(
+			methods.map((m) => ({
+				id: m.id,
+				type: m.type,
+				token: m.token,
+				chain: m.chain,
+				decimals: m.decimals,
+				displayName: m.displayName,
+				contractAddress: m.contractAddress,
+				confirmations: m.confirmations,
+				iconUrl: m.iconUrl,
+				coin_type:
+					coinTypeByChainId.get(m.id) ?? (m.keyRingId ? coinTypeByKeyRing.get(m.keyRingId) : undefined) ?? null,
+				curve: m.keyRingId ? "ed25519" : "secp256k1",
+				encoding: m.encoding ?? m.addressType,
+				encoding_params: JSON.parse(m.encodingParams || "{}"),
+				rpc_url: m.rpcUrl,
+				rpc_headers: JSON.parse(m.rpcHeaders || "{}"),
+			})),
+		);
+	});
+
 	/** GET /admin/next-path — which derivation path to use for a coin type */
 	app.get("/admin/next-path", async (c) => {
 		const coinType = Number(c.req.query("coin_type"));
