@@ -1,25 +1,6 @@
 import type { IPriceOracle, PriceAsset, PriceResult } from "./types.js";
 import { AssetNotSupportedError } from "./types.js";
 
-/**
- * Token symbol → CoinGecko API ID mapping.
- * CoinGecko uses lowercase slugs, not ticker symbols.
- */
-const COINGECKO_IDS: Record<string, string> = {
-	BTC: "bitcoin",
-	ETH: "ethereum",
-	DOGE: "dogecoin",
-	LTC: "litecoin",
-	SOL: "solana",
-	LINK: "chainlink",
-	UNI: "uniswap",
-	AERO: "aerodrome-finance",
-	TRX: "tron",
-	BNB: "binancecoin",
-	POL: "matic-network",
-	AVAX: "avalanche-2",
-};
-
 /** Default cache TTL: 60 seconds. CoinGecko free tier allows 10-30 req/min. */
 const DEFAULT_CACHE_TTL_MS = 60_000;
 
@@ -30,8 +11,8 @@ interface CachedPrice {
 }
 
 export interface CoinGeckoOracleOpts {
-	/** Override token→id mapping. */
-	tokenIds?: Record<string, string>;
+	/** Token→CoinGecko ID mapping. Populated from payment_methods.oracle_asset_id at boot. */
+	tokenIds: Record<string, string>;
 	/** Cache TTL in ms. Default: 60s. */
 	cacheTtlMs?: number;
 	/** Custom fetch function (for testing). */
@@ -40,8 +21,9 @@ export interface CoinGeckoOracleOpts {
 
 /**
  * CoinGecko price oracle — free API, no key required.
- * Used for assets without Chainlink on-chain feeds (DOGE, LTC).
- * Caches prices to stay within rate limits.
+ *
+ * Token→CoinGecko ID mapping is DB-driven (payment_methods.oracle_asset_id).
+ * Adding a new chain = adding a DB row with the CoinGecko slug. No code deploy.
  */
 export class CoinGeckoOracle implements IPriceOracle {
 	private readonly ids: Record<string, string>;
@@ -49,8 +31,8 @@ export class CoinGeckoOracle implements IPriceOracle {
 	private readonly fetchFn: typeof fetch;
 	private readonly cache = new Map<string, CachedPrice>();
 
-	constructor(opts: CoinGeckoOracleOpts = {}) {
-		this.ids = { ...COINGECKO_IDS, ...opts.tokenIds };
+	constructor(opts: CoinGeckoOracleOpts) {
+		this.ids = { ...opts.tokenIds };
 		this.cacheTtlMs = opts.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS;
 		this.fetchFn = opts.fetchFn ?? fetch;
 	}
