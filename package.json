@@ -1,6 +1,7 @@
 {
   "name": "@wopr-network/platform-crypto-server",
   "version": "0.1.0",
+  "packageManager": "pnpm@10.31.0",
   "type": "module",
   "main": "dist/entry.js",
   "types": "dist/entry.d.ts",
