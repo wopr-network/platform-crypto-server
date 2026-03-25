@@ -351,11 +351,19 @@ export function createKeyServerApp(deps: KeyServerDeps): Hono {
 	/** GET /admin/chains — full payment method records for admin tools (sweep CLI, etc.) */
 	app.get("/admin/chains", async (c) => {
 		const methods = await deps.methodStore.listAll();
-		// Join with path_allocations to get coin_type
+		// Build coin_type lookup: address_type → coin_type from path_allocations
 		const allocations = await deps.db.select().from(pathAllocations);
 		const coinTypeByChainId = new Map<string, number>();
 		for (const a of allocations) {
 			if (a.chainId) coinTypeByChainId.set(a.chainId, a.coinType);
+		}
+		// Build a reverse map: for each coin_type, find which address_type it maps to
+		// Then any chain with the same address_type gets that coin_type
+		const addrTypeToCoinType = new Map<string, number>();
+		for (const a of allocations) {
+			if (!a.chainId) continue;
+			const method = methods.find((m) => m.id === a.chainId);
+			if (method) addrTypeToCoinType.set(method.addressType, a.coinType);
 		}
 		// Also check key_rings for Ed25519 chains
 		const rings = await deps.db.select().from(keyRings);
@@ -376,7 +384,10 @@ export function createKeyServerApp(deps: KeyServerDeps): Hono {
 				confirmations: m.confirmations,
 				iconUrl: m.iconUrl,
 				coin_type:
-					coinTypeByChainId.get(m.id) ?? (m.keyRingId ? coinTypeByKeyRing.get(m.keyRingId) : undefined) ?? null,
+					coinTypeByChainId.get(m.id) ??
+					(m.keyRingId ? coinTypeByKeyRing.get(m.keyRingId) : undefined) ??
+					addrTypeToCoinType.get(m.addressType) ??
+					null,
 				curve: m.keyRingId ? "ed25519" : "secp256k1",
 				encoding: m.encoding ?? m.addressType,
 				encoding_params: JSON.parse(m.encodingParams || "{}"),
