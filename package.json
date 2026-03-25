@@ -18,6 +18,7 @@
     "build": "tsc",
     "lint": "biome check src/",
     "format": "biome format --write src/",
+    "format:check": "biome format src/",
     "test": "vitest run",
     "start": "node dist/entry.js"
   },
